@@ -16,6 +16,8 @@ struct auth_db {
     auth_user_t *users;
 };
 
+/* Validates that the username is non-empty, does not exceed the maximum length,
+ and consists only of alphanumeric characters. */
 bool auth_valid_username(const char *username) {
     size_t len;
 
@@ -34,6 +36,7 @@ bool auth_valid_username(const char *username) {
     return true;
 }
 
+// balance parsing helper function that validates the input string and converts it to int32_t
 static bool parse_balance(const char *s, int32_t *out) {
     char *end = NULL;
     long value;
@@ -48,6 +51,7 @@ static bool parse_balance(const char *s, int32_t *out) {
     return true;
 }
 
+// load the auth database from the specified file path
 auth_db_t *auth_load(const char *path) {
     FILE *file = fopen(path, "r");
     auth_db_t *db = calloc(1, sizeof(*db));
@@ -88,6 +92,7 @@ auth_db_t *auth_load(const char *path) {
     return db;
 }
 
+// destroy the auth database and free all associated memory
 void auth_destroy(auth_db_t *db) {
     auth_user_t *user;
 
@@ -103,6 +108,7 @@ void auth_destroy(auth_db_t *db) {
     free(db);
 }
 
+// lookup the specified username in the auth database and return the balance if found
 bool auth_lookup(auth_db_t *db, const char *username, int32_t *balance) {
     if (db == NULL || username == NULL) {
         return false;

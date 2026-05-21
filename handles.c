@@ -54,6 +54,7 @@ static void copy_username(char dest[MAX_USERNAME_LEN + 1], const char *src) {
     }
 }
 
+// Returns the shared user with the given username in the canvas, or NULL if not found.
 static shared_user_t *find_shared_user(canvas_record_t *canvas,
                                        const char *username) {
     for (shared_user_t *user = canvas->users; user != NULL; user = user->next) {
@@ -64,6 +65,7 @@ static shared_user_t *find_shared_user(canvas_record_t *canvas,
     return NULL;
 }
 
+// Returns true if the canvas has at least one connected user, false otherwise.
 static bool canvas_has_connected_user(canvas_record_t *canvas) {
     for (shared_user_t *user = canvas->users; user != NULL; user = user->next) {
         if (user->connected) {
@@ -73,6 +75,7 @@ static bool canvas_has_connected_user(canvas_record_t *canvas) {
     return false;
 }
 
+// Returns true if all connected users of the canvas are waiting at the barrier, false otherwise.
 static bool canvas_barrier_complete(canvas_record_t *canvas) {
     for (shared_user_t *user = canvas->users; user != NULL; user = user->next) {
         if (user->connected && !user->barrier_waiting) {
@@ -89,6 +92,7 @@ static void maybe_destroy_canvas(canvas_record_t *canvas) {
     }
 }
 
+// Creates a new handle store. Returns NULL on failure.
 handle_store_t *handles_create(void) {
     handle_store_t *store = calloc(1, sizeof(*store));
     if (store == NULL) {
@@ -102,6 +106,7 @@ handle_store_t *handles_create(void) {
     return store;
 }
 
+// Destroys the handle store and all associated resources. Safe to call with NULL.
 void handles_destroy(handle_store_t *store) {
     canvas_record_t *canvas;
     sprite_record_t *sprite;
@@ -282,6 +287,7 @@ placement_record_t *handles_get_placement(handle_store_t *store, uint64_t id,
     return NULL;
 }
 
+// The following functions return the internal pointers and properties of the records, as well as the mutex for synchronization.
 struct canvas *canvas_record_ptr(canvas_record_t *record) { return record->canvas; }
 size_t canvas_record_width(canvas_record_t *record) { return record->width; }
 size_t canvas_record_height(canvas_record_t *record) { return record->height; }
@@ -291,6 +297,7 @@ struct sprite_placement *placement_record_ptr(placement_record_t *record) { retu
 uint64_t placement_record_canvas_id(placement_record_t *record) { return record->canvas_id; }
 pthread_mutex_t *handles_mutex(handle_store_t *store) { return &store->mutex; }
 
+// The following functions implement the sharing and barrier synchronization for canvases, as well as destroying resources when users disconnect.
 bool canvas_record_has_waiting_barrier(canvas_record_t *record,
                                        const char *username) {
     shared_user_t *user = find_shared_user(record, username);

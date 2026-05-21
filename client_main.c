@@ -18,11 +18,13 @@
 #define MAX_RESPONSE_LEN 4096
 #define MAX_USERNAME_LEN 32
 
+// Displays usage information and exits the program.
 static void usage(const char *program_name) {
     fprintf(stderr, "Usage: %s <server_pid>\n", program_name);
     exit(1);
 }
 
+// Parses the command-line arguments and extracts the server PID.
 static int parse_arguments(int argc, char *argv[], pid_t *server_pid) {
     char *endptr = NULL;
     long pid;
@@ -39,6 +41,7 @@ static int parse_arguments(int argc, char *argv[], pid_t *server_pid) {
     return 0;
 }
 
+// Writes the entire buffer to the specified file descriptor, handling partial writes and interruptions.
 static int write_all(int fd, const char *buf, size_t len) {
     size_t total = 0;
 
@@ -58,6 +61,7 @@ static int write_all(int fd, const char *buf, size_t len) {
     return 0;
 }
 
+// Reads a line of response from the specified file descriptor into the buffer, ensuring it is null-terminated.
 static int read_response_line(int fd, char *buffer, size_t len) {
     size_t used = 0;
 
@@ -104,6 +108,7 @@ static char *trim_whitespace(char *s) {
     return s;
 }
 
+// Extracts the first token from the input line, skipping leading whitespace, and stores it in the provided buffer.
 static bool first_token(const char *line, char *token, size_t token_len) {
     size_t i = 0;
     size_t j = 0;
@@ -122,6 +127,7 @@ static bool first_token(const char *line, char *token, size_t token_len) {
     return j > 0;
 }
 
+// Parses a Login command line to extract the username, ensuring it follows the expected format and length constraints.
 static bool login_username(const char *line, char *username, size_t username_len) {
     char copy[MAX_INPUT_LEN];
     char *save = NULL;
@@ -144,6 +150,7 @@ static bool login_username(const char *line, char *username, size_t username_len
     return true;
 }
 
+// Parses a response line that is expected to contain a single integer value, ensuring it is properly formatted and within the range of a long.
 static bool parse_integer_reply(const char *response, long *value) {
     char copy[MAX_RESPONSE_LEN];
     char *end = NULL;
@@ -160,6 +167,7 @@ static bool parse_integer_reply(const char *response, long *value) {
     return errno == 0 && end != copy && *end == '\0';
 }
 
+// Displays the RPC response in a user-friendly format, mapping specific error codes to messages and handling success cases appropriately.
 static void display_rpc_response(const char *response) {
     char copy[MAX_RESPONSE_LEN];
     char *save = NULL;
@@ -205,6 +213,7 @@ static void display_rpc_response(const char *response) {
     fflush(stdout);
 }
 
+// Main function that initializes the client, connects to the server, and processes user input commands in a loop until disconnection or an error occurs.
 int main(int argc, char *argv[]) {
     pid_t server_pid = 0;
     pid_t client_pid = getpid();

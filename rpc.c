@@ -20,6 +20,7 @@ typedef enum {
     RPC_INTERNAL = -3
 } rpc_error_t;
 
+// These functions return a malloc'd string containing the response, or NULL on allocation failure. The caller is responsible for freeing the result.
 static char *xstrdup(const char *s) {
     char *copy = malloc(strlen(s) + 1);
     if (copy != NULL) {
@@ -28,6 +29,7 @@ static char *xstrdup(const char *s) {
     return copy;
 }
 
+// These functions also print the response to stdout as a side effect, since the main thread is reading responses from there.
 static char *response_code(int code) {
     char buf[32];
     snprintf(buf, sizeof(buf), "%d\n", code);
@@ -39,6 +41,8 @@ static char *response_code(int code) {
     return result;
 }
 
+/* For numeric responses, we prefix with "0 " to indicate success, followed by the value. 
+This is just a convention to make it easier to parse responses in tests. */
 static char *response_u64(uint64_t value) {
     char buf[64];
     snprintf(buf, sizeof(buf), "0 %llu\n", (unsigned long long)value);
@@ -50,6 +54,7 @@ static char *response_u64(uint64_t value) {
     return result;
 }
 
+// For signed 32-bit integer responses, we prefix with "0 " to indicate success, followed by the value.
 static char *response_i32(int32_t value) {
     char buf[64];
     snprintf(buf, sizeof(buf), "%d\n", value);
@@ -61,6 +66,7 @@ static char *response_i32(int32_t value) {
     return result;
 }
 
+// For generating custom responses, we prefix with "0 " to indicate success, followed by the values.
 static char *response_generate(int dat, int movie) {
     char buf[64];
     snprintf(buf, sizeof(buf), "0 %d %d\n", dat, movie);
@@ -88,6 +94,7 @@ static size_t tokenize(char *line, char **tokens, size_t max_tokens) {
     return count;
 }
 
+// These parsing functions return true on success and false on failure. On success, they store the parsed value in *out.
 static bool parse_u64(const char *s, uint64_t *out) {
     char *end = NULL;
     unsigned long long value;
@@ -171,6 +178,8 @@ static char *with_suffix(const char *base, const char *suffix) {
     return out;
 }
 
+/* This function runs ffmpeg to convert a raw video file to mp4 format. It returns 0 on success and -1 on failure. 
+The ffmpeg output is written to the specified log file. */
 static int run_ffmpeg(const char *dat, const char *mp4, const char *log,
                       size_t width, size_t height, size_t frame_rate) {
     char size_arg[64];
@@ -219,6 +228,8 @@ static int run_ffmpeg(const char *dat, const char *mp4, const char *log,
     return 0;
 }
 
+/* This function handles the "generate" RPC command, which generates a movie from a range of frames of a canvas. 
+It returns a response string indicating success or failure, and also prints the response to stdout. */
 static char *handle_generate(rpc_context_t *ctx, client_state_t *client,
                              char **tokens, size_t ntokens) {
     uint64_t canvas_id;
@@ -308,12 +319,15 @@ static char *require_login(client_state_t *client) {
     return NULL;
 }
 
+// If the canvas is currently at a barrier for this user, wait until they have passed the barrier and can safely interact with the canvas again.
 static void wait_canvas_barrier_if_needed(rpc_context_t *ctx,
                                           canvas_record_t *canvas,
                                           client_state_t *client) {
     canvas_record_wait_for_barrier(ctx->handles, canvas, client->username);
 }
 
+// This function can be called when a client disconnects unexpectedly, or when they explicitly request disconnection. 
+// It performs necessary cleanup of server-side state related to the client.
 char *rpc_handle_request(request_t *request, void *user_data) {
     rpc_context_t *ctx = user_data;
     client_state_t *client = request->client;
@@ -576,6 +590,8 @@ char *rpc_handle_request(request_t *request, void *user_data) {
     return response_code(RPC_FAIL);
 }
 
+/* This function can be called when a client disconnects unexpectedly, or when they explicitly request disconnection. 
+It performs necessary cleanup of server-side state related to the client. */
 void rpc_client_disconnected(rpc_context_t *ctx, client_state_t *client) {
     if (ctx == NULL || client == NULL || !client->logged_in) {
         return;

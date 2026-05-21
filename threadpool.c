@@ -73,6 +73,7 @@ static int write_all(int fd, const char *buf, size_t len) {
     return 0;
 }
 
+// These functions also print the response to stdout as a side effect, since the main thread is reading responses from there.
 static void send_ordered_response(request_t *request, char *response_str) {
     client_state_t *client = request->client;
     uint64_t seq_num = request->request_seq_num;
@@ -120,6 +121,7 @@ static void send_ordered_response(request_t *request, char *response_str) {
     pthread_mutex_unlock(&client->output_mutex);
 }
 
+// Helper functions for managing client queues and request scheduling.
 static client_queue_t *find_client_queue(threadpool_t *pool,
                                          client_state_t *client) {
     for (client_queue_t *queue = pool->clients_head; queue != NULL;
@@ -131,6 +133,7 @@ static client_queue_t *find_client_queue(threadpool_t *pool,
     return NULL;
 }
 
+// Unlinks the given client queue from the pool's linked list of clients. Does not free the queue itself.
 static void unlink_client_queue(threadpool_t *pool, client_queue_t *queue) {
     if (queue->prev != NULL) {
         queue->prev->next = queue->next;
@@ -149,6 +152,7 @@ static void unlink_client_queue(threadpool_t *pool, client_queue_t *queue) {
     }
 }
 
+// Dequeues the next request to be processed in a fair manner across clients. Returns NULL if there are no pending requests.
 static request_t *dequeue_fair_request(threadpool_t *pool) {
     if (pool->pending_requests == 0 || pool->clients_head == NULL) {
         return NULL;
@@ -181,6 +185,7 @@ static request_t *dequeue_fair_request(threadpool_t *pool) {
     return NULL;
 }
 
+// Worker thread main function. Loops, dequeuing requests and processing them until the pool is shutting down and there are no pending requests left.
 static void *worker_main(void *arg) {
     threadpool_t *pool = arg;
 
@@ -215,6 +220,7 @@ static void *worker_main(void *arg) {
     return NULL;
 }
 
+// Public API functions for creating/destroying the thread pool, registering/removing clients, and submitting requests.
 threadpool_t *threadpool_create(size_t worker_count,
                                 request_handler_fn handler,
                                 void *user_data) {
@@ -279,6 +285,8 @@ void request_destroy(request_t *request) {
     free(request);
 }
 
+/* Registers a client with the thread pool, allowing it to submit requests. 
+Returns 0 on success, or -1 on failure (e.g. if the client is already registered). */
 int threadpool_register_client(threadpool_t *pool, client_state_t *client) {
     if (pool == NULL || client == NULL) {
         errno = EINVAL;
@@ -315,6 +323,7 @@ int threadpool_register_client(threadpool_t *pool, client_state_t *client) {
     return 0;
 }
 
+// Removes a client from the thread pool, preventing it from submitting new requests and cleaning up any pending requests.
 void threadpool_remove_client(threadpool_t *pool, client_state_t *client) {
     if (pool == NULL || client == NULL) {
         return;
@@ -342,6 +351,9 @@ void threadpool_remove_client(threadpool_t *pool, client_state_t *client) {
     free(queue);
 }
 
+/* Submits a request to the thread pool for processing. The request will be processed in order relative to 
+other requests from the same client, but the pool will schedule requests from different clients in a fair manner.
+Returns 0 on success, or -1 on failure (e.g. if the client is not registered or is disconnected). */
 int threadpool_submit(threadpool_t *pool, client_state_t *client, char *rpc_line) {
     if (pool == NULL || client == NULL || rpc_line == NULL) {
         errno = EINVAL;
@@ -396,6 +408,7 @@ int threadpool_submit(threadpool_t *pool, client_state_t *client, char *rpc_line
     return 0;
 }
 
+// Destroys the thread pool and cleans up all associated resources.
 void threadpool_destroy(threadpool_t *pool) {
     if (pool == NULL) {
         return;
