@@ -1,2 +1,23 @@
 /libanimate
 
+/untracked-stuff
+
+*.o
+*.log
+*.tmp
+*.bak
+*.swp
+*.DS_Store
+*.idea/
+*.vscode/
+*.env
+*.pyc
+
+*.err
+*.out
+*.log
+*.cache
+*.tmp
+*.bak
+*.swp
+.fuse_hidden*
